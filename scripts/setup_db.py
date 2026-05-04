@@ -35,10 +35,10 @@ def main() -> None:
 
         # Quick row count to confirm
         with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM redfin_active")
-            active_count = cur.fetchone()[0]
-            cur.execute("SELECT COUNT(*) FROM redfin_sold")
-            sold_count = cur.fetchone()[0]
+            cur.execute("SELECT COUNT(*) AS count FROM redfin_active")
+            active_count = cur.fetchone()["count"]
+            cur.execute("SELECT COUNT(*) AS count FROM redfin_sold")
+            sold_count = cur.fetchone()["count"]
         print(f"\nCurrent rows: redfin_active={active_count}, redfin_sold={sold_count}")
 
     finally:

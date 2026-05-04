@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS redfin_active (
     addr_key        TEXT        NOT NULL,   -- normalized key for parcel matching
     city            TEXT,
     zip             TEXT,
+    source_county   TEXT,
     lat             DOUBLE PRECISION NOT NULL,
     lng             DOUBLE PRECISION NOT NULL,
     geom            GEOMETRY(Point, 4326),
@@ -73,6 +74,7 @@ CREATE TABLE IF NOT EXISTS redfin_sold (
     addr_key        TEXT        NOT NULL,
     city            TEXT,
     zip             TEXT,
+    source_county   TEXT,
     lat             DOUBLE PRECISION NOT NULL,
     lng             DOUBLE PRECISION NOT NULL,
     geom            GEOMETRY(Point, 4326),
@@ -112,3 +114,10 @@ CREATE INDEX IF NOT EXISTS idx_redfin_sold_fetched_at
 COMMENT ON TABLE redfin_sold IS
     'Redfin recently-sold listings harvested by the DeepFin crawler. '
     'Upserted on listing_url; looks back sold_within_days per crawl config.';
+
+
+ALTER TABLE IF EXISTS redfin_active
+    ADD COLUMN IF NOT EXISTS source_county TEXT;
+
+ALTER TABLE IF EXISTS redfin_sold
+    ADD COLUMN IF NOT EXISTS source_county TEXT;

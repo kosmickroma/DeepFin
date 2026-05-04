@@ -54,8 +54,8 @@ def main() -> None:
     )
     parser.add_argument("--delay", type=float, default=1.5,
                         help="Seconds between requests (default: 1.5)")
-    parser.add_argument("--sold-days", type=int, default=180,
-                        help="Sold lookback window in days (default: 180)")
+    parser.add_argument("--sold-days", type=int, default=365,
+                        help="Sold lookback window in days (default: 365)")
     parser.add_argument("--active-cell", type=float, default=0.004,
                         help="Grid cell size in degrees for active listings (default: 0.004)")
     parser.add_argument("--sold-cell", type=float, default=0.008,

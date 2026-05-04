@@ -41,13 +41,25 @@ def _state_path(area_name: str, mode: str) -> Path:
     return here / f"{area_name}_{mode}.json"
 
 
+def _default_state() -> dict:
+    return {"completed_cells": [], "started_at": None, "last_updated": None}
+
+
 def _load_state(path: Path) -> dict:
     if path.exists():
         try:
-            return json.loads(path.read_text())
+            state = json.loads(path.read_text())
+            if not isinstance(state, dict):
+                return _default_state()
+            state.setdefault("completed_cells", [])
+            state.setdefault("started_at", None)
+            state.setdefault("last_updated", None)
+            if not isinstance(state["completed_cells"], list):
+                state["completed_cells"] = []
+            return state
         except (json.JSONDecodeError, OSError):
             pass
-    return {"completed_cells": [], "started_at": None, "last_updated": None}
+    return _default_state()
 
 
 def _save_state(path: Path, state: dict) -> None:
@@ -96,13 +108,13 @@ INSERT INTO redfin_active (
     address, addr_key, city, zip, property_type,
     price, beds, baths, sqft, lot_sqft, yr_built,
     dom, price_per_sqft, hoa_monthly, status,
-    mls_num, listing_url, lat, lng,
+    mls_num, listing_url, source_county, lat, lng,
     geom, fetched_at
 ) VALUES (
     %(address)s, %(addr_key)s, %(city)s, %(zip)s, %(property_type)s,
     %(price)s, %(beds)s, %(baths)s, %(sqft)s, %(lot_sqft)s, %(yr_built)s,
     %(dom)s, %(price_per_sqft)s, %(hoa_monthly)s, %(status)s,
-    %(mls_num)s, %(listing_url)s, %(lat)s, %(lng)s,
+    %(mls_num)s, %(listing_url)s, %(source_county)s, %(lat)s, %(lng)s,
     ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326),
     NOW()
 )
@@ -112,6 +124,7 @@ ON CONFLICT (listing_url) DO UPDATE SET
     dom            = EXCLUDED.dom,
     hoa_monthly    = EXCLUDED.hoa_monthly,
     price_per_sqft = EXCLUDED.price_per_sqft,
+    source_county  = EXCLUDED.source_county,
     geom           = EXCLUDED.geom,
     fetched_at     = EXCLUDED.fetched_at
 WHERE redfin_active.listing_url IS NOT NULL
@@ -122,13 +135,13 @@ INSERT INTO redfin_active (
     address, addr_key, city, zip, property_type,
     price, beds, baths, sqft, lot_sqft, yr_built,
     dom, price_per_sqft, hoa_monthly, status,
-    mls_num, listing_url, lat, lng,
+    mls_num, listing_url, source_county, lat, lng,
     geom, fetched_at
 ) VALUES (
     %(address)s, %(addr_key)s, %(city)s, %(zip)s, %(property_type)s,
     %(price)s, %(beds)s, %(baths)s, %(sqft)s, %(lot_sqft)s, %(yr_built)s,
     %(dom)s, %(price_per_sqft)s, %(hoa_monthly)s, %(status)s,
-    %(mls_num)s, %(listing_url)s, %(lat)s, %(lng)s,
+    %(mls_num)s, %(listing_url)s, %(source_county)s, %(lat)s, %(lng)s,
     ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326),
     NOW()
 )
@@ -140,13 +153,13 @@ INSERT INTO redfin_sold (
     address, addr_key, city, zip, property_type,
     sold_price, beds, baths, sqft, lot_sqft, yr_built,
     dom, price_per_sqft, sold_date,
-    mls_num, listing_url, lat, lng,
+    mls_num, listing_url, source_county, lat, lng,
     geom, fetched_at
 ) VALUES (
     %(address)s, %(addr_key)s, %(city)s, %(zip)s, %(property_type)s,
     %(sold_price)s, %(beds)s, %(baths)s, %(sqft)s, %(lot_sqft)s, %(yr_built)s,
     %(dom)s, %(price_per_sqft)s, %(sold_date)s,
-    %(mls_num)s, %(listing_url)s, %(lat)s, %(lng)s,
+    %(mls_num)s, %(listing_url)s, %(source_county)s, %(lat)s, %(lng)s,
     ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326),
     NOW()
 )
@@ -155,6 +168,7 @@ ON CONFLICT (listing_url) DO UPDATE SET
     sold_date      = EXCLUDED.sold_date,
     dom            = EXCLUDED.dom,
     price_per_sqft = EXCLUDED.price_per_sqft,
+    source_county  = EXCLUDED.source_county,
     geom           = EXCLUDED.geom,
     fetched_at     = EXCLUDED.fetched_at
 WHERE redfin_sold.listing_url IS NOT NULL
@@ -165,13 +179,13 @@ INSERT INTO redfin_sold (
     address, addr_key, city, zip, property_type,
     sold_price, beds, baths, sqft, lot_sqft, yr_built,
     dom, price_per_sqft, sold_date,
-    mls_num, listing_url, lat, lng,
+    mls_num, listing_url, source_county, lat, lng,
     geom, fetched_at
 ) VALUES (
     %(address)s, %(addr_key)s, %(city)s, %(zip)s, %(property_type)s,
     %(sold_price)s, %(beds)s, %(baths)s, %(sqft)s, %(lot_sqft)s, %(yr_built)s,
     %(dom)s, %(price_per_sqft)s, %(sold_date)s,
-    %(mls_num)s, %(listing_url)s, %(lat)s, %(lng)s,
+    %(mls_num)s, %(listing_url)s, %(source_county)s, %(lat)s, %(lng)s,
     ST_SetSRID(ST_MakePoint(%(lng)s, %(lat)s), 4326),
     NOW()
 )
@@ -232,7 +246,7 @@ def run_crawl(
     for m in modes:
         cell_deg = cfg.active_cell_deg if m == "active" else cfg.sold_cell_deg
         state_path = _state_path(area_name, m)
-        state = _load_state(state_path) if resume else {"completed_cells": []}
+        state = _load_state(state_path) if resume else _default_state()
         if state["started_at"] is None:
             state["started_at"] = datetime.now(timezone.utc).isoformat()
 
@@ -260,73 +274,83 @@ def run_crawl(
         conn = None if dry_run else get_db_conn()
 
         timeout = httpx.Timeout(cfg.http_timeout)
-        with httpx.Client(headers=REDFIN_HEADERS, timeout=timeout, follow_redirects=True) as client:
-            prime_session(client)
+        interrupted = False
+        try:
+            with httpx.Client(headers=REDFIN_HEADERS, timeout=timeout, follow_redirects=True) as client:
+                prime_session(client)
 
-            for i, cell in enumerate(pending):
-                # Progress reporting
-                cfg.progress_fn(len(completed), len(grid), f"{m} {cell}")
+                for i, cell in enumerate(pending):
+                    # Progress reporting
+                    cfg.progress_fn(len(completed), len(grid), f"{m} {cell}")
 
-                # Rate-limit: delay + jitter
-                if i > 0:
-                    jitter = random.uniform(-cfg.jitter_fraction, cfg.jitter_fraction)
-                    sleep_s = max(0.2, cfg.delay_seconds * (1 + jitter))
-                    time.sleep(sleep_s)
+                    # Rate-limit: delay + jitter
+                    if i > 0:
+                        jitter = random.uniform(-cfg.jitter_fraction, cfg.jitter_fraction)
+                        sleep_s = max(0.2, cfg.delay_seconds * (1 + jitter))
+                        time.sleep(sleep_s)
 
-                # Fetch with retry
-                records: list[dict] = []
-                for attempt in range(1, cfg.max_retries + 1):
-                    try:
-                        if m == "active":
-                            records = fetch_cell_active(client, *cell)
-                        else:
-                            records = fetch_cell_sold(
-                                client, *cell,
-                                sold_within_days=cfg.sold_within_days,
-                            )
-                        consecutive_errors = 0
-                        break
-                    except httpx.HTTPStatusError as e:
-                        print(f"    HTTP {e.response.status_code} on attempt {attempt}/{cfg.max_retries}", flush=True)
-                        if attempt < cfg.max_retries:
-                            time.sleep(cfg.delay_seconds * 3)
-                    except httpx.HTTPError as e:
-                        print(f"    Network error attempt {attempt}: {e}", flush=True)
-                        if attempt < cfg.max_retries:
-                            time.sleep(cfg.delay_seconds * 2)
-                    except Exception as e:
-                        print(f"    Unexpected error attempt {attempt}: {e}", flush=True)
-                        break
-                else:
-                    consecutive_errors += 1
-                    print(f"    Skipping cell after {cfg.max_retries} retries. consecutive_errors={consecutive_errors}", flush=True)
-                    if consecutive_errors >= cfg.error_backoff_threshold:
-                        print(f"    {consecutive_errors} consecutive errors — backing off {cfg.backoff_sleep_seconds}s", flush=True)
-                        time.sleep(cfg.backoff_sleep_seconds)
-                        consecutive_errors = 0
-                    # Mark as completed anyway to avoid infinite retry on bad cells
+                    # Fetch with retry
+                    records: list[dict] = []
+                    for attempt in range(1, cfg.max_retries + 1):
+                        try:
+                            if m == "active":
+                                records = fetch_cell_active(client, *cell)
+                            else:
+                                records = fetch_cell_sold(
+                                    client, *cell,
+                                    sold_within_days=cfg.sold_within_days,
+                                )
+                            if len(records) >= 350:
+                                print(f"    Warning: cell may be saturated ({len(records)} rows) at {cell}", flush=True)
+                            for record in records:
+                                record["source_county"] = area_name
+                            consecutive_errors = 0
+                            break
+                        except httpx.HTTPStatusError as e:
+                            print(f"    HTTP {e.response.status_code} on attempt {attempt}/{cfg.max_retries}", flush=True)
+                            if attempt < cfg.max_retries:
+                                time.sleep(cfg.delay_seconds * 3)
+                        except httpx.HTTPError as e:
+                            print(f"    Network error attempt {attempt}: {e}", flush=True)
+                            if attempt < cfg.max_retries:
+                                time.sleep(cfg.delay_seconds * 2)
+                        except Exception as e:
+                            print(f"    Unexpected error attempt {attempt}: {e}", flush=True)
+                            break
+                    else:
+                        consecutive_errors += 1
+                        print(f"    Skipping cell after {cfg.max_retries} retries. consecutive_errors={consecutive_errors}", flush=True)
+                        if consecutive_errors >= cfg.error_backoff_threshold:
+                            print(f"    {consecutive_errors} consecutive errors — backing off {cfg.backoff_sleep_seconds}s", flush=True)
+                            time.sleep(cfg.backoff_sleep_seconds)
+                            consecutive_errors = 0
+                        # Mark as completed anyway to avoid infinite retry on bad cells
+                        completed.add(_cell_key(cell))
+                        state["completed_cells"] = list(completed)
+                        _save_state(state_path, state)
+                        continue
+
+                    total_fetched += len(records)
+
+                    # Write to DB
+                    if records and not dry_run and conn is not None:
+                        try:
+                            with conn.cursor() as cur:
+                                written = _upsert_records(cur, records, m)
+                                total_written += written
+                            conn.commit()
+                        except psycopg2.Error as e:
+                            print(f"    DB error: {e}", flush=True)
+                            conn.rollback()
+
+                    # Checkpoint state
                     completed.add(_cell_key(cell))
                     state["completed_cells"] = list(completed)
                     _save_state(state_path, state)
-                    continue
 
-                total_fetched += len(records)
-
-                # Write to DB
-                if records and not dry_run and conn is not None:
-                    try:
-                        with conn.cursor() as cur:
-                            written = _upsert_records(cur, records, m)
-                            total_written += written
-                        conn.commit()
-                    except psycopg2.Error as e:
-                        print(f"    DB error: {e}", flush=True)
-                        conn.rollback()
-
-                # Checkpoint state
-                completed.add(_cell_key(cell))
-                state["completed_cells"] = list(completed)
-                _save_state(state_path, state)
+        except KeyboardInterrupt:
+            interrupted = True
+            print(f"\n  Interrupted — partial results so far:", flush=True)
 
         if conn is not None:
             conn.close()
@@ -339,11 +363,16 @@ def run_crawl(
             "records_written": total_written,
             "elapsed_seconds": round(elapsed, 1),
         }
+        label = "Interrupted" if interrupted else "Done"
+        cells_done = len(completed) - (len(grid) - len(pending))
         print(
-            f"\n  Done {m}: {len(pending)} cells | {total_fetched} fetched | "
+            f"\n  {label} {m}: {cells_done}/{len(pending)} cells | {total_fetched} fetched | "
             f"{total_written} written | {elapsed:.0f}s elapsed",
             flush=True,
         )
+
+        if interrupted:
+            return results
 
     return results
 

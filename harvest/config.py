@@ -67,7 +67,7 @@ class CrawlConfig:
     sold_cell_deg:   float = 0.008
 
     # How far back to pull sold listings on each cell.
-    sold_within_days: int = 180
+    sold_within_days: int = 365
 
     # Max retries per cell on HTTP error before skipping.
     max_retries: int = 3
