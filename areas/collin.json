@@ -1,0 +1,19 @@
+{
+  "name": "Collin County, TX",
+  "short": "collin",
+  "notes": "Collin CAD coverage area. ~400K parcels. Plano/Frisco/McKinney metro.",
+  "bbox": {
+    "min_lng": -96.953,
+    "min_lat": 33.000,
+    "max_lng": -96.298,
+    "max_lat": 33.655
+  },
+  "cell_size_hints": {
+    "active_deg": 0.004,
+    "sold_deg":   0.008
+  },
+  "estimated_cells": {
+    "active": 26896,
+    "sold":   6724
+  }
+}

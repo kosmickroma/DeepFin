@@ -1,0 +1,27 @@
+{
+  "name": "Dallas County, TX",
+  "short": "dallas",
+  "notes": "DCAD coverage area. ~850K parcels. BBox derived from county boundary.",
+  "bbox": {
+    "min_lng": -97.054,
+    "min_lat": 32.545,
+    "max_lng": -96.461,
+    "max_lat": 33.017
+  },
+  "cell_size_hints": {
+    "active_deg": 0.004,
+    "sold_deg":   0.008,
+    "comment": "Active: ~40 cells/sq-mi. Sold: ~10 cells/sq-mi (sparser data)."
+  },
+  "estimated_cells": {
+    "active": 16650,
+    "sold":   4162,
+    "comment": "Active cells at 0.004deg, sold at 0.008deg over full county bbox."
+  },
+  "estimated_crawl_time": {
+    "active_seconds_at_1_5s_delay": 24975,
+    "active_minutes": 416,
+    "sold_seconds_at_1_5s_delay": 6243,
+    "sold_minutes": 104
+  }
+}

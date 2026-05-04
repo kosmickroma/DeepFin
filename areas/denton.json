@@ -1,0 +1,19 @@
+{
+  "name": "Denton County, TX",
+  "short": "denton",
+  "notes": "Denton CAD coverage area. ~350K parcels. Denton/Lewisville/The Colony metro.",
+  "bbox": {
+    "min_lng": -97.388,
+    "min_lat": 32.987,
+    "max_lng": -96.664,
+    "max_lat": 33.636
+  },
+  "cell_size_hints": {
+    "active_deg": 0.004,
+    "sold_deg":   0.008
+  },
+  "estimated_cells": {
+    "active": 29340,
+    "sold":   7335
+  }
+}

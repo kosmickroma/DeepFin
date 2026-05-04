@@ -1,0 +1,19 @@
+{
+  "name": "Tarrant County, TX",
+  "short": "tarrant",
+  "notes": "TAD coverage area. ~700K parcels. Fort Worth metro.",
+  "bbox": {
+    "min_lng": -97.611,
+    "min_lat": 32.524,
+    "max_lng": -96.916,
+    "max_lat": 33.035
+  },
+  "cell_size_hints": {
+    "active_deg": 0.004,
+    "sold_deg":   0.008
+  },
+  "estimated_cells": {
+    "active": 21962,
+    "sold":   5490
+  }
+}
