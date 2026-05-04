@@ -56,8 +56,21 @@ pip install -r requirements.txt
 
 ```bash
 cp .env.example .env
-# Edit .env — set DATABASE_URL to point at the same Cloud SQL instance as lot-ledger
 ```
+
+Edit `.env` using the **individual variable format** — not `DATABASE_URL`. The Cloud SQL
+password contains special characters that break URL percent-encoding:
+
+```
+DB_HOST=35.239.64.3
+DB_PORT=5432
+DB_NAME=lotledger
+DB_USER=postgres
+DB_PASSWORD=<password from lot-ledger .env>
+```
+
+`harvest/config.py:get_db_conn()` falls back to individual vars automatically when
+`DATABASE_URL` is not set — no code changes needed.
 
 The tables land in the same DB as `parcels`, `tad_parcels`, etc. They don't interfere with any
 existing tables.
@@ -135,6 +148,11 @@ The default config (`CrawlConfig`) uses:
 
 Reduce delay to `0.8` for faster crawls on a VPS; keep at `1.5+` if running on a shared
 connection or if you see HTTP 429s.
+
+**Stopping a run:** Hit Ctrl+C at any time. The crawler will print a partial summary
+(`Interrupted sold: 26/4425 cells | 847 fetched | 847 written`) and exit cleanly.
+Progress is already saved — just re-run the same command (without `--no-resume`) to pick up
+where it stopped.
 
 ---
 
@@ -216,6 +234,7 @@ DATABASE_URL=<cloud-sql-url> python scripts/setup_db.py
 | `schema.sql` | DDL for `redfin_active` and `redfin_sold` |
 | `areas/*.json` | Bounding box + cell-size hints per county |
 | `state/*.json` | Auto-generated checkpoint files (gitignored) |
+| `check_db.py` | Quick row count + sample rows query — run after any crawl to verify DB |
 
 ---
 
@@ -234,5 +253,5 @@ python scripts/crawl_area.py dallas --dry-run --mode both \
 python scripts/crawl_area.py dallas --mode both
 
 # 4. Check results
-psql $DATABASE_URL -c "SELECT COUNT(*) FROM redfin_active; SELECT COUNT(*) FROM redfin_sold;"
+python check_db.py
 ```
