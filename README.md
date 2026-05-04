@@ -1,11 +1,12 @@
 # DeepFin
 
-Slow, resumable crawler that pulls **active (for-sale)** and **recently-sold** Redfin listings
+Slow, resumable data collector that pulls **active (for-sale)** and **recently-sold** Redfin listings
 for the Dallas–Fort Worth metro and stores them in the same PostgreSQL/PostGIS database as
 [lot-ledger](../lot-ledger).
 
-This repository is the standalone home for the scraper. It is intentionally separate from the
-main LotLedger app so crawling, schema changes, and rate-limit tuning stay isolated.
+This repository is the standalone home for the Redfin collection service. It is intentionally
+separate from the main LotLedger app so data collection, schema changes, and rate-limit tuning
+stay isolated.
 
 ---
 
@@ -89,10 +90,10 @@ Both have GIST spatial indexes on `geom` and B-tree indexes on `addr_key`.
 
 ---
 
-## Running a Crawl
+## Running a Collection Pass
 
 ```bash
-# Full Dallas County crawl — both active + sold (180-day lookback), 1.5s delay
+# Full Dallas County collection run — both active + sold (180-day lookback), 1.5s delay
 python scripts/crawl_area.py dallas
 
 # Sold data only, look back 1 year, slightly faster
@@ -101,7 +102,7 @@ python scripts/crawl_area.py dallas --mode sold --sold-days 365 --delay 1.0
 # Active listings only, dry run (no DB writes) to estimate record counts
 python scripts/crawl_area.py dallas --mode active --dry-run
 
-# Start fresh (ignore checkpoint — re-crawl everything)
+# Start fresh (ignore checkpoint — re-run everything)
 python scripts/crawl_area.py dallas --no-resume
 
 # All four DFW counties:
@@ -111,20 +112,11 @@ python scripts/crawl_area.py collin   --mode both
 python scripts/crawl_area.py denton   --mode both
 ```
 
-### Estimated crawl times (1.5s delay, full county)
-
-| County  | Active cells | Active time | Sold cells | Sold time |
-|---------|-------------|------------|-----------|----------|
-| Dallas  | ~16,650      | ~7 hours   | ~4,162     | ~1.7 hrs  |
-| Tarrant | ~21,962      | ~9 hours   | ~5,490     | ~2.3 hrs  |
-| Collin  | ~26,896      | ~11 hours  | ~6,724     | ~2.8 hrs  |
-| Denton  | ~29,340      | ~12 hours  | ~7,335     | ~3.1 hrs  |
-
 Run in a `tmux` or `screen` session — the state checkpoint lets you pause and resume at any time.
 
 ### Incremental updates
 
-After the initial full crawl, run incrementally with a shorter sold window:
+After the initial full collection run, run incrementally with a shorter sold window:
 
 ```bash
 # Weekly update — re-pull last 30 days of sold data across all counties
@@ -133,7 +125,7 @@ for area in dallas tarrant collin denton; do
 done
 ```
 
-Active listings are always fresh — every re-crawl overwrites price/status/DOM via upsert.
+Active listings are always fresh — every re-run overwrites price/status/DOM via upsert.
 
 ---
 
@@ -146,10 +138,10 @@ The default config (`CrawlConfig`) uses:
 - **Auto-backoff**: if 5 consecutive errors occur, pause 60 seconds
 - **Max 3 retries** per cell before skipping and marking complete
 
-Reduce delay to `0.8` for faster crawls on a VPS; keep at `1.5+` if running on a shared
+Reduce delay to `0.8` for faster runs on a VPS; keep at `1.5+` if running on a shared
 connection or if you see HTTP 429s.
 
-**Stopping a run:** Hit Ctrl+C at any time. The crawler will print a partial summary
+**Stopping a run:** Hit Ctrl+C at any time. The runner will print a partial summary
 (`Interrupted sold: 26/4425 cells | 847 fetched | 847 written`) and exit cleanly.
 Progress is already saved — just re-run the same command (without `--no-resume`) to pick up
 where it stopped.
@@ -215,8 +207,8 @@ DATABASE_URL=<cloud-sql-url> python scripts/setup_db.py
 - **Dedup key** is `listing_url`. Records without a URL (rare) are inserted with `ON CONFLICT
   DO NOTHING` to avoid duplicates.
 - **Redfin ToS**: This tool is for private internal use only. Do not resell or redistribute data
-  pulled by this crawler. The lot-ledger project and this crawler are internal tools for a single
-  real estate acquisition team.
+  pulled by this collector. The lot-ledger project and this collector are internal tools for a
+  single real estate acquisition team.
 - **350 per cell cap**: Redfin returns at most 350 results per cell request. Cells in very dense
   condo areas may be undersampled. Shrink `--active-cell` to `0.002` if you suspect truncation.
 
@@ -227,14 +219,14 @@ DATABASE_URL=<cloud-sql-url> python scripts/setup_db.py
 | File | Purpose |
 |------|---------|
 | `harvest/redfin.py` | HTTP client — `fetch_cell_active()`, `fetch_cell_sold()`, address normalization |
-| `harvest/crawler.py` | Crawl engine — grid generation, rate limiting, state checkpoint, DB upserts |
+| `harvest/crawler.py` | Collection engine — grid generation, rate limiting, state checkpoint, DB upserts |
 | `harvest/config.py` | `CrawlConfig` dataclass, `get_db_conn()` |
 | `scripts/setup_db.py` | Applies `schema.sql` to create tables |
 | `scripts/crawl_area.py` | CLI entry point — parse args, load area bbox, call `run_crawl()` |
 | `schema.sql` | DDL for `redfin_active` and `redfin_sold` |
 | `areas/*.json` | Bounding box + cell-size hints per county |
 | `state/*.json` | Auto-generated checkpoint files (gitignored) |
-| `check_db.py` | Quick row count + sample rows query — run after any crawl to verify DB |
+| `check_db.py` | Quick row count + sample rows query — run after any collection pass to verify DB |
 
 ---
 
@@ -249,7 +241,7 @@ python scripts/setup_db.py  # create tables
 python scripts/crawl_area.py dallas --dry-run --mode both \
     --active-cell 0.02 --sold-cell 0.04   # big cells = fewer requests for testing
 
-# 3. Full crawl (run in tmux)
+# 3. Full run (run in tmux)
 python scripts/crawl_area.py dallas --mode both
 
 # 4. Check results

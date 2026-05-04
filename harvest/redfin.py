@@ -2,7 +2,7 @@
 #
 # Role: Low-level Redfin GIS-CSV client. Fetches one grid cell at a time.
 #       Returns structured dicts for active listings and recently-sold records.
-#       Rate limiting and crawl orchestration live in crawler.py.
+#       Rate limiting and run orchestration live in crawler.py.
 #
 # Connects to:
 #   harvest/crawler.py    - calls fetch_cell_active() and fetch_cell_sold()

@@ -1,6 +1,6 @@
 -- schema.sql
 --
--- Create the two Redfin harvest tables in the target PostgreSQL/PostGIS database.
+-- Create the two Redfin collection tables in the target PostgreSQL/PostGIS database.
 -- Run via: psql $DATABASE_URL -f schema.sql
 -- Or:      python scripts/setup_db.py
 --
@@ -58,8 +58,8 @@ CREATE INDEX IF NOT EXISTS idx_redfin_active_fetched_at
     ON redfin_active(fetched_at);
 
 COMMENT ON TABLE redfin_active IS
-    'Redfin for-sale listings harvested by the DeepFin crawler. '
-    'Upserted on listing_url; fetched_at updated each crawl pass.';
+    'Redfin for-sale listings collected by the DeepFin data collector. '
+    'Upserted on listing_url; fetched_at updated each collection pass.';
 
 
 -- ============================================================
@@ -112,8 +112,8 @@ CREATE INDEX IF NOT EXISTS idx_redfin_sold_fetched_at
     ON redfin_sold(fetched_at);
 
 COMMENT ON TABLE redfin_sold IS
-    'Redfin recently-sold listings harvested by the DeepFin crawler. '
-    'Upserted on listing_url; looks back sold_within_days per crawl config.';
+    'Redfin recently-sold listings collected by the DeepFin data collector. '
+    'Upserted on listing_url; looks back sold_within_days per collection config.';
 
 
 ALTER TABLE IF EXISTS redfin_active

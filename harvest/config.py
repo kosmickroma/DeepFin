@@ -46,12 +46,12 @@ def get_db_conn():
 
 
 # ---------------------------------------------------------------------------
-# Crawl configuration
+# Collection configuration
 # ---------------------------------------------------------------------------
 
 @dataclass
 class CrawlConfig:
-    """Parameters controlling one crawl run."""
+    """Parameters controlling one collection run."""
 
     # How many seconds to sleep between requests (can be fractional).
     # 1.5 s = ~40 req/min. Safe floor is ~0.5 s.

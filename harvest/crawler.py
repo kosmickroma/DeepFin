@@ -1,6 +1,6 @@
 # harvest/crawler.py
 #
-# Role: Slow-crawl engine. Iterates a bounding-box grid cell-by-cell, fetches
+# Role: Slow collection engine. Iterates a bounding-box grid cell-by-cell, fetches
 #       active and/or sold listings, upserts into the DB, and persists state
 #       so interrupted runs resume where they left off.
 #
@@ -208,7 +208,7 @@ def _upsert_records(cur, records: list[dict], mode: Literal["active", "sold"]) -
 
 
 # ---------------------------------------------------------------------------
-# Main crawl function
+# Main collection function
 # ---------------------------------------------------------------------------
 
 def run_crawl(

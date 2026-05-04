@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # scripts/crawl_area.py
 #
-# Role: Main CLI entry point for running a crawl pass over a named area.
-#       Loads the area's bbox from areas/<name>.json, configures the crawl,
+# Role: Main CLI entry point for running a collection pass over a named area.
+#       Loads the area's bbox from areas/<name>.json, configures the run,
 #       and calls crawler.run_crawl().
 #
 # Usage examples:
-#   # Crawl Dallas — both active listings and sold data (default)
+#   # Run Dallas collection — both active listings and sold data (default)
 #   python scripts/crawl_area.py dallas
 #
 #   # Sold data only, 365-day lookback, resume from last checkpoint
@@ -46,7 +46,7 @@ def load_area(name: str) -> dict:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Harvest Redfin listings for a named area.")
+    parser = argparse.ArgumentParser(description="Collect Redfin listings for a named area.")
     parser.add_argument("area", help="Area name (e.g. dallas, tarrant, collin, denton)")
     parser.add_argument(
         "--mode", choices=["active", "sold", "both"], default="both",
@@ -73,7 +73,7 @@ def main() -> None:
 
     if args.reset_state:
         reset_state(args.area, args.mode)
-        print("State reset. Run again without --reset-state to start a fresh crawl.")
+        print("State reset. Run again without --reset-state to start a fresh run.")
         return
 
     cfg = CrawlConfig(
@@ -83,7 +83,7 @@ def main() -> None:
         sold_cell_deg=args.sold_cell,
     )
 
-    print(f"\nStarting crawl: area={args.area}  mode={args.mode}  dry_run={args.dry_run}")
+    print(f"\nStarting run: area={args.area}  mode={args.mode}  dry_run={args.dry_run}")
     print(f"BBox: lng [{bbox['min_lng']}, {bbox['max_lng']}]  "
           f"lat [{bbox['min_lat']}, {bbox['max_lat']}]")
 
